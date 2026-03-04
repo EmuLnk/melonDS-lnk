@@ -167,6 +167,8 @@ class SharedPreferencesSettingsRepository(
             getMicSource(),
             getFirmwareConfiguration(),
             renderConfigurationFlow.first(),
+            isEmuLnkEnabled(),
+            getEmuLnkPort(),
         )
     }
 
@@ -490,6 +492,15 @@ class SharedPreferencesSettingsRepository(
 
     override fun areCheatsEnabled(): Boolean {
         return preferences.getBoolean("cheats_enabled", false)
+    }
+
+    override fun isEmuLnkEnabled(): Boolean {
+        return preferences.getBoolean("emulnk_enabled", true)
+    }
+
+    override fun getEmuLnkPort(): Int {
+        val portString = preferences.getString("emulnk_port", "55355") ?: "55355"
+        return portString.toIntOrNull() ?: 55355
     }
 
     override fun observeRomSearchDirectories(): Flow<Array<Uri>> {

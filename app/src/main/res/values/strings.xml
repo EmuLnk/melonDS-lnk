@@ -1,5 +1,5 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name">melonDS</string>
+    <string name="app_name">melonDS-LnK</string>
 
     <string name="ok">OK</string>
     <string name="yes">Yes</string>
@@ -269,6 +269,12 @@
     <string name="show_progress_indicators_summary">Shows on-screen indicators when progress is made towards an achievement</string>
     <string name="show_leaderboard_indicators">Show leaderboard indicators</string>
     <string name="show_leaderboard_indicators_summary">Shows on-screen indicators when a leaderboard attempt is in progress</string>
+
+    <string name="emulnk">EmuLnk</string>
+    <string name="emulnk_summary">UDP bridge for the EmuLnk companion app</string>
+    <string name="emulnk_description">When enabled, a UDP server runs alongside the emulator to allow the EmuLnk companion app to read game data in real time.</string>
+    <string name="emulnk_port">Port</string>
+    <string name="emulnk_port_summary">UDP port the EmuLnk server listens on (default: 55355)</string>
 
     <string name="cheats">Cheats</string>
     <string name="cheats_summary">Enable &amp; import cheat codes</string>

@@ -67,6 +67,9 @@ interface SettingsRepository {
 
     fun areCheatsEnabled(): Boolean
 
+    fun isEmuLnkEnabled(): Boolean
+    fun getEmuLnkPort(): Int
+
     fun observeTheme(): Flow<Theme>
     fun observeRomIconFiltering(): Flow<RomIconFiltering>
     fun observeRomSearchDirectories(): Flow<Array<Uri>>

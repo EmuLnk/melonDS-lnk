@@ -26,6 +26,7 @@ add_library(
         src/main/cpp/MelonDSAndroidCameraHandler.cpp
         src/main/cpp/RetroAchievementsMapper.cpp
         src/main/cpp/RomIconBuilder.cpp
+        src/main/cpp/EmuLnkServer.cpp
 )
 
 target_link_libraries(melonDS-android-frontend melonDS-lib)

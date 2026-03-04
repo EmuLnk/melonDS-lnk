@@ -175,3 +175,15 @@ std::unique_ptr<MelonDSAndroid::RenderSettings> MelonDSAndroidConfiguration::bui
 
     return settings;
 }
+
+bool MelonDSAndroidConfiguration::getEmuLnkEnabled(JNIEnv* env, jobject emulatorConfiguration) {
+    jclass clazz = env->GetObjectClass(emulatorConfiguration);
+    jfieldID field = env->GetFieldID(clazz, "emuLnkEnabled", "Z");
+    return env->GetBooleanField(emulatorConfiguration, field);
+}
+
+int MelonDSAndroidConfiguration::getEmuLnkPort(JNIEnv* env, jobject emulatorConfiguration) {
+    jclass clazz = env->GetObjectClass(emulatorConfiguration);
+    jfieldID field = env->GetFieldID(clazz, "emuLnkPort", "I");
+    return env->GetIntField(emulatorConfiguration, field);
+}

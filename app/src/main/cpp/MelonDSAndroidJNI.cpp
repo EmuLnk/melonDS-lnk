@@ -18,6 +18,7 @@
 #include "MelonDSAndroidConfiguration.h"
 #include "MelonDSAndroidCameraHandler.h"
 #include "RetroAchievementsMapper.h"
+#include "EmuLnkServer.h"
 
 #include "Platform.h"
 
@@ -49,6 +50,10 @@ bool isFastForwardEnabled = false;
 jobject globalCameraManager;
 MelonDSAndroidCameraHandler* androidCameraHandler;
 
+EmuLnkServer* emuLnkServer = nullptr;
+bool emulnkEnabled = false;
+int emulnkPort = 55355;
+
 extern "C"
 {
 JNIEXPORT void JNICALL
@@ -56,6 +61,9 @@ Java_me_magnum_melonds_MelonEmulator_setupEmulator(JNIEnv* env, jobject thiz, jo
 {
     MelonDSAndroid::EmulatorConfiguration finalEmulatorConfiguration = MelonDSAndroidConfiguration::buildEmulatorConfiguration(env, emulatorConfiguration);
     fastForwardSpeedMultiplier = finalEmulatorConfiguration.fastForwardSpeedMultiplier;
+
+    emulnkEnabled = MelonDSAndroidConfiguration::getEmuLnkEnabled(env, emulatorConfiguration);
+    emulnkPort = MelonDSAndroidConfiguration::getEmuLnkPort(env, emulatorConfiguration);
 
     globalCameraManager = env->NewGlobalRef(cameraManager);
 
@@ -243,6 +251,11 @@ Java_me_magnum_melonds_MelonEmulator_startEmulation(JNIEnv* env, jobject thiz)
     pthread_cond_init(&emuThreadCond, NULL);
     pthread_create(&emuThread, NULL, emulate, NULL);
     pthread_setname_np(emuThread, "EmulatorThread");
+
+    if (emulnkEnabled) {
+        emuLnkServer = new EmuLnkServer();
+        emuLnkServer->start(emulnkPort, MelonDSAndroid::getNds());
+    }
 
     started = true;
 }
@@ -434,6 +447,12 @@ Java_me_magnum_melonds_MelonEmulator_getRewindWindow(JNIEnv* env, jobject thiz) 
 JNIEXPORT void JNICALL
 Java_me_magnum_melonds_MelonEmulator_stopEmulation(JNIEnv* env, jobject thiz)
 {
+    if (emuLnkServer) {
+        emuLnkServer->stop();
+        delete emuLnkServer;
+        emuLnkServer = nullptr;
+    }
+
     if (started)
     {
         pthread_mutex_lock(&emuThreadMutex);
@@ -509,6 +528,23 @@ Java_me_magnum_melonds_MelonEmulator_updateEmulatorConfiguration(JNIEnv* env, jo
     MelonDSAndroid::EmulatorConfiguration newConfiguration = MelonDSAndroidConfiguration::buildEmulatorConfiguration(env, emulatorConfiguration);
 
     fastForwardSpeedMultiplier = newConfiguration.fastForwardSpeedMultiplier;
+
+    bool newEmulnkEnabled = MelonDSAndroidConfiguration::getEmuLnkEnabled(env, emulatorConfiguration);
+    int newEmulnkPort = MelonDSAndroidConfiguration::getEmuLnkPort(env, emulatorConfiguration);
+
+    if (newEmulnkEnabled != emulnkEnabled || newEmulnkPort != emulnkPort) {
+        if (emuLnkServer) {
+            emuLnkServer->stop();
+            delete emuLnkServer;
+            emuLnkServer = nullptr;
+        }
+        if (newEmulnkEnabled) {
+            emuLnkServer = new EmuLnkServer();
+            emuLnkServer->start(newEmulnkPort, MelonDSAndroid::getNds());
+        }
+        emulnkEnabled = newEmulnkEnabled;
+        emulnkPort = newEmulnkPort;
+    }
 
     MelonDSAndroid::updateEmulatorConfiguration(std::make_unique<MelonDSAndroid::EmulatorConfiguration>(std::move(newConfiguration)));
 

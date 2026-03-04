@@ -36,6 +36,21 @@
             app:ms_switchOffExplanationText="@string/rewind_description"
             app:ms_includedPrefScreen="xml/pref_rewind" />
 
+    <com.smp.masterswitchpreference.MasterSwitchPreference
+            android:key="emulnk_enabled"
+            android:title="@string/emulnk"
+            app:iconSpaceReserved="false"
+            android:fragment="me.magnum.melonds.ui.settings.fragments.EmuLnkPreferencesFragment"
+            android:defaultValue="true"
+            app:ms_switchOnText="@string/on"
+            app:ms_switchOffText="@string/off"
+            app:ms_switchThumbColor="?android:colorAccent"
+            app:ms_switchTrackColor="@color/prefSwitchRailColor"
+            app:ms_switchOnBackgroundColor="@color/prefSwitchBackground"
+            app:ms_switchOffBackgroundColor="@color/prefSwitchBackground"
+            app:ms_switchOffExplanationText="@string/emulnk_description"
+            app:ms_includedPrefScreen="xml/pref_emulnk" />
+
     <SwitchPreference
             android:key="enable_sustained_performance"
             android:title="@string/sustained_performance_mode"
