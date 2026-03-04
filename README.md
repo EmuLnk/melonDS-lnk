@@ -10,7 +10,7 @@
 <p align="center">
   <a href="https://github.com/EmuLnk/emulnk"><img src="https://img.shields.io/badge/Main_Project-EmuLnk-B47CFF?style=for-the-badge&logo=github&logoColor=white" alt="EmuLnk"/></a>
   &nbsp;
-  <a href="https://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/EmuLnk/melonds-lnk"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" height="28" alt="Get it on Obtainium"/></a>
+  <a href="https://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/EmuLnk/melonDS-lnk"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" height="28" alt="Get it on Obtainium"/></a>
 </p>
 
 ## Project Repos
