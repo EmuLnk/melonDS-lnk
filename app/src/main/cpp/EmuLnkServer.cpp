@@ -117,6 +117,7 @@ void EmuLnkServer::handlePacket(const char* buf, int len, struct sockaddr_in* cl
         const char* response = "melonds";
         sendto(sockFd, response, strlen(response), 0,
                (struct sockaddr*)clientAddr, sizeof(*clientAddr));
+        LOGI("Handshake from client, responded 'melonds'");
         return;
     }
 
@@ -144,6 +145,7 @@ void EmuLnkServer::handlePacket(const char* buf, int len, struct sockaddr_in* cl
                 if ((uint32_t)serialLen > size) serialLen = size;
                 sendto(sockFd, serial, serialLen, 0,
                        (struct sockaddr*)clientAddr, sizeof(*clientAddr));
+                LOGI("Game ID read: %s", serial);
                 return;
             }
 
