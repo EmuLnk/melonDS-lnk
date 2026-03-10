@@ -10,7 +10,7 @@ public:
     EmuLnkServer();
     ~EmuLnkServer();
 
-    void start(int port, melonDS::NDS* nds);
+    bool start(int port, melonDS::NDS* nds);
     void stop();
 
 private:

@@ -1,10 +1,11 @@
 #include "EmuLnkServer.h"
+#include "CartLoader.h"
 
+#include <string>
 #include <cstring>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <arpa/inet.h>
 #include <android/log.h>
 
 #include "NDS.h"
@@ -15,7 +16,6 @@
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
 #define EMULNK_MAX_READ 2048
-#define EMULNK_VIRTUAL_SERIAL_ADDR 0x00200000
 
 EmuLnkServer::EmuLnkServer() : sockFd(-1), port(55355), thread(0), running(false), nds(nullptr) {
 }
@@ -24,9 +24,9 @@ EmuLnkServer::~EmuLnkServer() {
     stop();
 }
 
-void EmuLnkServer::start(int port, melonDS::NDS* nds) {
+bool EmuLnkServer::start(int port, melonDS::NDS* nds) {
     if (running)
-        return;
+        return true;
 
     this->port = port;
     this->nds = nds;
@@ -34,7 +34,7 @@ void EmuLnkServer::start(int port, melonDS::NDS* nds) {
     sockFd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockFd < 0) {
         LOGE("Failed to create UDP socket");
-        return;
+        return false;
     }
 
     int reuse = 1;
@@ -50,13 +50,20 @@ void EmuLnkServer::start(int port, melonDS::NDS* nds) {
         LOGE("Failed to bind UDP socket on port %d", port);
         close(sockFd);
         sockFd = -1;
-        return;
+        return false;
     }
 
     running = true;
-    pthread_create(&thread, nullptr, listenerThread, this);
+    if (pthread_create(&thread, nullptr, listenerThread, this) != 0) {
+        LOGE("Failed to create listener thread");
+        running = false;
+        close(sockFd);
+        sockFd = -1;
+        return false;
+    }
     pthread_setname_np(thread, "EmuLnkServer");
     LOGI("Started on port %d", port);
+    return true;
 }
 
 void EmuLnkServer::stop() {
@@ -112,12 +119,24 @@ static bool isBinaryPacket(const char* buf, int len) {
 }
 
 void EmuLnkServer::handlePacket(const char* buf, int len, struct sockaddr_in* clientAddr) {
-    // EMLK handshake: 4 bytes "EMLK"
-    if (len == 4 && memcmp(buf, "EMLK", 4) == 0) {
-        const char* response = "melonds";
-        sendto(sockFd, response, strlen(response), 0,
+    // EMLKV2 handshake: 6 bytes "EMLKV2"
+    if (len == 6 && memcmp(buf, "EMLKV2", 6) == 0) {
+        char json[512];
+        if (nds && nds->CartInserted()) {
+            auto* cart = nds->GetNDSCart();
+            char gameCode[5] = {0};
+            memcpy(gameCode, cart->GetHeader().GameCode, 4);
+            std::string hash = MelonDSAndroid::GetLastRomHash();
+            snprintf(json, sizeof(json),
+                "{\"emulator\":\"melonds\",\"game_id\":\"%.4s\",\"game_hash\":\"%s\",\"platform\":\"NDS\"}",
+                gameCode, hash.c_str());
+        } else {
+            snprintf(json, sizeof(json),
+                "{\"emulator\":\"melonds\",\"game_id\":\"\",\"game_hash\":\"\",\"platform\":\"NDS\"}");
+        }
+        sendto(sockFd, json, strlen(json), 0,
                (struct sockaddr*)clientAddr, sizeof(*clientAddr));
-        LOGI("Handshake from client, responded 'melonds'");
+        LOGI("V2 handshake: %s", json);
         return;
     }
 
@@ -132,24 +151,6 @@ void EmuLnkServer::handlePacket(const char* buf, int len, struct sockaddr_in* cl
             // Memory read request
             if (size > EMULNK_MAX_READ) size = EMULNK_MAX_READ;
 
-            // Virtual serial address: return game identification
-            if (address == EMULNK_VIRTUAL_SERIAL_ADDR) {
-                char serial[16];
-                if (nds && nds->CartInserted()) {
-                    auto* cart = nds->GetNDSCart();
-                    snprintf(serial, sizeof(serial), "NDS:%.4s", cart->GetHeader().GameCode);
-                } else {
-                    snprintf(serial, sizeof(serial), "NDS:????");
-                }
-                int serialLen = strlen(serial);
-                if ((uint32_t)serialLen > size) serialLen = size;
-                sendto(sockFd, serial, serialLen, 0,
-                       (struct sockaddr*)clientAddr, sizeof(*clientAddr));
-                LOGI("Game ID read: %s", serial);
-                return;
-            }
-
-            // Normal memory read from MainRAM
             if (nds && nds->MainRAM != nullptr) {
                 char response[EMULNK_MAX_READ];
                 for (uint32_t i = 0; i < size; i++) {
