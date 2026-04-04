@@ -15,7 +15,7 @@
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
-#define EMULNK_MAX_READ 2048
+#define EMULNK_MAX_READ 4096
 
 EmuLnkServer::EmuLnkServer() : sockFd(-1), port(55355), thread(0), running(false), nds(nullptr) {
 }
@@ -138,6 +138,56 @@ void EmuLnkServer::handlePacket(const char* buf, int len, struct sockaddr_in* cl
                (struct sockaddr*)clientAddr, sizeof(*clientAddr));
         LOGI("V2 handshake: %s", json);
         return;
+    }
+
+    // Batch read: "EL" magic (0x45, 0x4C) + count + entries
+    if (len >= 4 && buf[0] == 0x45 && buf[1] == 0x4C) {
+        uint16_t count;
+        memcpy(&count, buf + 2, 2);
+        if (count > 0 && count <= 256 && len >= (int)(4 + count * 8)) {
+            uint8_t response[16384];
+            int resp_off = 4;
+            response[0] = 0x45;
+            response[1] = 0x4C;
+            memcpy(response + 2, &count, 2);
+
+            if (nds && nds->MainRAM != nullptr) {
+                for (uint16_t i = 0; i < count; i++) {
+                    uint32_t addr, size;
+                    memcpy(&addr, buf + 4 + i * 8, 4);
+                    memcpy(&size, buf + 4 + i * 8 + 4, 4);
+                    if (size > EMULNK_MAX_READ) size = EMULNK_MAX_READ;
+
+                    if (resp_off + 2 + (int)size <= (int)sizeof(response)) {
+                        uint16_t len16 = (uint16_t)size;
+                        memcpy(response + resp_off, &len16, 2);
+                        resp_off += 2;
+                        uint32_t masked_start = addr & nds->MainRAMMask;
+                        uint32_t mask_size = nds->MainRAMMask + 1;
+                        if (masked_start + size <= mask_size) {
+                            memcpy(response + resp_off, nds->MainRAM + masked_start, size);
+                        } else {
+                            uint32_t first = mask_size - masked_start;
+                            memcpy(response + resp_off, nds->MainRAM + masked_start, first);
+                            memcpy(response + resp_off + first, nds->MainRAM, size - first);
+                        }
+                        resp_off += size;
+                    } else {
+                        response[resp_off++] = 0;
+                        response[resp_off++] = 0;
+                    }
+                }
+            } else {
+                for (uint16_t i = 0; i < count; i++) {
+                    response[resp_off++] = 0;
+                    response[resp_off++] = 0;
+                }
+            }
+
+            sendto(sockFd, (const char*)response, resp_off, 0,
+                   (struct sockaddr*)clientAddr, sizeof(*clientAddr));
+            return;
+        }
     }
 
     // Binary protocol: at least 8 bytes with non-printable chars in address field
