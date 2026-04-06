@@ -145,11 +145,11 @@ void EmuLnkServer::handlePacket(const char* buf, int len, struct sockaddr_in* cl
         uint16_t count;
         memcpy(&count, buf + 2, 2);
         if (count > 0 && count <= 256 && len >= (int)(4 + count * 8)) {
-            uint8_t response[16384];
+            uint8_t response[65000];
             int resp_off = 4;
+            uint16_t actual = 0;
             response[0] = 0x45;
             response[1] = 0x4C;
-            memcpy(response + 2, &count, 2);
 
             if (nds && nds->MainRAM != nullptr) {
                 for (uint16_t i = 0; i < count; i++) {
@@ -172,17 +172,25 @@ void EmuLnkServer::handlePacket(const char* buf, int len, struct sockaddr_in* cl
                             memcpy(response + resp_off + first, nds->MainRAM, size - first);
                         }
                         resp_off += size;
+                        actual++;
+                    } else if (resp_off + 2 <= (int)sizeof(response)) {
+                        response[resp_off++] = 0;
+                        response[resp_off++] = 0;
+                        actual++;
                     } else {
-                        response[resp_off++] = 0;
-                        response[resp_off++] = 0;
+                        break;
                     }
                 }
             } else {
                 for (uint16_t i = 0; i < count; i++) {
                     response[resp_off++] = 0;
                     response[resp_off++] = 0;
+                    actual++;
                 }
             }
+
+            response[2] = actual & 0xFF;
+            response[3] = (actual >> 8) & 0xFF;
 
             sendto(sockFd, (const char*)response, resp_off, 0,
                    (struct sockaddr*)clientAddr, sizeof(*clientAddr));
